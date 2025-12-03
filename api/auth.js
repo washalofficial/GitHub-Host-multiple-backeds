@@ -1,33 +1,53 @@
-import fetch from 'node-fetch';
-
-const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
-const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+import fetch from "node-fetch";
 
 export default async function handler(req, res) {
-  if (req.method === 'GET') {
-    // return oauth url
-    const state = 'auto-' + Date.now();
-    const url = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=repo&state=${state}`;
-    return res.json({ ok: true, url });
-  }
-
-  if (req.method === 'POST') {
-    const body = req.body || {};
-    if (body.type === 'pat') {
-      const token = body.token;
-      try {
-        const r = await fetch('https://api.github.com/user', { headers: { Authorization: `token ${token}` }});
-        if (!r.ok) return res.status(401).json({ ok: false });
-        const user = await r.json();
-        return res.json({ ok: true, user });
-      } catch (err) {
-        console.error(err);
-        return res.status(500).json({ ok: false });
-      }
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  
+  try {
+    const { token } = req.query;
+    
+    // Validate token
+    if (!token || token.length < 20) {
+      return res.status(400).json({ 
+        error: "Valid GitHub token required",
+        hint: "Get token from: https://github.com/settings/tokens"
+      });
     }
-    return res.status(400).json({ ok: false, msg: 'invalid' });
+    
+    const resp = await fetch("https://api.github.com/user", {
+      headers: {
+        "Authorization": `token ${token}`,
+        "User-Agent": "My-Tool-App"
+      }
+    });
+    
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      return res.status(401).json({ 
+        error: "Invalid GitHub Token",
+        details: resp.statusText
+      });
+    }
+    
+    const data = await resp.json();
+    
+    // Return only needed info
+    return res.json({
+      success: true,
+      user: {
+        login: data.login,
+        name: data.name,
+        avatar_url: data.avatar_url
+      }
+    });
+    
+  } catch (err) {
+    console.error("Auth Error:", err.message);
+    return res.status(500).json({ 
+      error: "Server error",
+      message: err.message 
+    });
   }
-
-  res.status(405).end();
 }
