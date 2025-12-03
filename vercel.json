@@ -1,23 +1,30 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/next"
-    }
-  ],
+  "version": 3,
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1.js"
+      "src": "/auth",
+      "dest": "/api/auth.js",
+      "methods": ["GET"]
+    },
+    {
+      "src": "/repo",
+      "dest": "/api/repo.js",
+      "methods": ["GET"]
+    },
+    {
+      "src": "/branch",
+      "dest": "/api/branch.js",
+      "methods": ["GET"]
+    },
+    {
+      "src": "/save",
+      "dest": "/api/save.js",
+      "methods": ["POST"]
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/$1"
+      "status": 404,
+      "dest": "/api/not-found.js"
     }
   ]
 }
